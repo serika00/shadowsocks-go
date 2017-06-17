@@ -1,4 +1,4 @@
-package shadowsocks
+package main
 
 func merge(left, right []uint64, comparison func (uint64, uint64) int64) []uint64 {
 	result := make([]uint64, len(left) + len(right))

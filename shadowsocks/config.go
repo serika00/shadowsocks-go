@@ -5,7 +5,7 @@
  * Time: 上午10:31
  * To change this template use File | Settings | File Templates.
  */
-package shadowsocks
+package main
 
 import (
 	"encoding/json"

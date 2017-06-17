@@ -1,4 +1,4 @@
-package shadowsocks
+package main
 
 import (
 	"encoding/binary"
@@ -16,15 +16,17 @@ const (
 type Conn struct {
 	net.Conn
 	*Cipher
+	*Manager
 	readBuf  []byte
 	writeBuf []byte
 	chunkId  uint32
 }
 
-func NewConn(c net.Conn, cipher *Cipher) *Conn {
+func NewConn(c net.Conn, cipher *Cipher, mgr *Manager) *Conn {
 	return &Conn{
 		Conn:     c,
 		Cipher:   cipher,
+		Manager:  mgr,
 		readBuf:  leakyBuf.Get(),
 		writeBuf: leakyBuf.Get()}
 }
@@ -63,7 +65,7 @@ func DialWithRawAddr(rawaddr []byte, server string, cipher *Cipher) (c *Conn, er
 	if err != nil {
 		return
 	}
-	c = NewConn(conn, cipher)
+	c = NewConn(conn, cipher, nil)
 	if cipher.ota {
 		if c.enc == nil {
 			if _, err = c.initEncrypt(); err != nil {
@@ -137,6 +139,13 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 	n, err = c.Conn.Read(cipherData)
 	if n > 0 {
 		c.decrypt(b[0:n], cipherData[0:n])
+
+		_, port, err := net.SplitHostPort(c.Conn.LocalAddr().String())
+		if err != nil {
+			Debug.Printf("fail to get port from conn")
+		}
+		c.UpdateStatistics(port, n)
+		// Debug.Printf("num of bytes update to stats from local read: " + strconv.Itoa(n))
 	}
 	return
 }
@@ -154,6 +163,14 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	if n >= headerLen {
 		n -= headerLen
 	}
+
+	_, port, err := net.SplitHostPort(c.Conn.LocalAddr().String())
+	if err != nil {
+		Debug.Printf("fail to get port from conn")
+	}
+	c.UpdateStatistics(port, n)
+	// Debug.Printf("num of bytes update to stats from local write: " + strconv.Itoa(n))
+
 	return
 }
 

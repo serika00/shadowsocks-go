@@ -1,8 +1,9 @@
-package shadowsocks
+package main
 
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -11,21 +12,21 @@ import (
 	"time"
 )
 
-const (
-	idType  = 0 // address type index
-	idIP0   = 1 // ip addres start index
-	idDmLen = 1 // domain address length index
-	idDm0   = 2 // domain address start index
-
-	typeIPv4 = 1 // type is ipv4 address
-	typeDm   = 3 // type is domain address
-	typeIPv6 = 4 // type is ipv6 address
-
-	lenIPv4     = 1 + net.IPv4len + 2 // 1addrType + ipv4 + 2port
-	lenIPv6     = 1 + net.IPv6len + 2 // 1addrType + ipv6 + 2port
-	lenDmBase   = 1 + 1 + 2           // 1addrType + 1addrLen + 2port, plus addrLen
-	lenHmacSha1 = 10
-)
+// const (
+// 	idType  = 0 // address type index
+// 	idIP0   = 1 // ip addres start index
+// 	idDmLen = 1 // domain address length index
+// 	idDm0   = 2 // domain address start index
+//
+// 	typeIPv4 = 1 // type is ipv4 address
+// 	typeDm   = 3 // type is domain address
+// 	typeIPv6 = 4 // type is ipv6 address
+//
+// 	lenIPv4     = 1 + net.IPv4len + 2 // 1addrType + ipv4 + 2port
+// 	lenIPv6     = 1 + net.IPv6len + 2 // 1addrType + ipv6 + 2port
+// 	lenDmBase   = 1 + 1 + 2           // 1addrType + 1addrLen + 2port, plus addrLen
+// 	lenHmacSha1 = 10
+// )
 
 var (
 	reqList            = newReqList()
@@ -233,6 +234,7 @@ func handleUDPConnection(handle *SecurePacketConn, n int, src net.Addr, receive 
 	} else {
 		Debug.Printf("[udp]using cached client %s->%s via %s ota=%v\n", src, dst, remote.LocalAddr(), ota)
 	}
+	log.Println(fmt.Sprintf("pipelining udp transmission %s <-> %s <-> %s", src, remote.LocalAddr(), dst))
 	if remote == nil {
 		fmt.Println("WTF")
 	}

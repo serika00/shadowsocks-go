@@ -1,4 +1,4 @@
-package shadowsocks
+package main
 
 import (
 	"bytes"
@@ -22,13 +22,15 @@ type SecurePacketConn struct {
 	net.PacketConn
 	*Cipher
 	ota bool
+	*Manager
 }
 
-func NewSecurePacketConn(c net.PacketConn, cipher *Cipher, ota bool) *SecurePacketConn {
+func NewSecurePacketConn(c net.PacketConn, cipher *Cipher, ota bool, mgr *Manager) *SecurePacketConn {
 	return &SecurePacketConn{
 		PacketConn: c,
 		Cipher:     cipher,
 		ota:        ota,
+		Manager:    mgr,
 	}
 }
 
@@ -65,6 +67,13 @@ func (c *SecurePacketConn) ReadFrom(b []byte) (n int, src net.Addr, err error) {
 	if b[idType]&OneTimeAuthMask > 0 {
 		ota = true
 	}
+
+	_, port, err := net.SplitHostPort(c.PacketConn.LocalAddr().String())
+	if err != nil {
+		Debug.Printf("fail to get port from conn")
+	}
+	c.UpdateStatistics(port, n)
+	// Debug.Printf(fmt.Sprintf("num of bytes update to stats from udp local read: %d", n))
 
 	if c.ota && !ota {
 		return 0, src, errPacketOtaFailed
@@ -107,6 +116,14 @@ func (c *SecurePacketConn) WriteTo(b []byte, dst net.Addr) (n int, err error) {
 	if c.ota {
 		n -= lenHmacSha1
 	}
+
+	_, port, err := net.SplitHostPort(c.PacketConn.LocalAddr().String())
+	if err != nil {
+		Debug.Printf("fail to get port from conn")
+	}
+	c.UpdateStatistics(port, n)
+	// Debug.Printf(fmt.Sprintf("num of bytes update to stats from udp local write: %d", n))
+
 	return
 }
 
@@ -131,5 +148,5 @@ func (c *SecurePacketConn) IsOta() bool {
 }
 
 func (c *SecurePacketConn) ForceOTA() net.PacketConn {
-	return NewSecurePacketConn(c.PacketConn, c.Cipher.Copy(), true)
+	return NewSecurePacketConn(c.PacketConn, c.Cipher.Copy(), true, c.Manager)
 }
